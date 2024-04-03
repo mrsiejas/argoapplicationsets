@@ -1,17 +1,47 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 configMapGenerator:
-- behavior: merge
-  literals:
-  - |
-    repository.credentials=- passwordSecret:
-        key: git_token
-        name: autopilot-secret
-      url: https://github.com/
-      usernameSecret:
-        key: git_username
-        name: autopilot-secret
-  name: argocd-cm
+  - behavior: merge
+    literals:
+      - |
+        repository.credentials=- passwordSecret:
+            key: git_token
+            name: autopilot-secret
+          url: https://github.com/
+          usernameSecret:
+            key: git_username
+            name: autopilot-secret
+    name: argocd-cm
 kind: Kustomization
 namespace: argocd
 resources:
-- github.com/argoproj-labs/argocd-autopilot/manifests/base?ref=v0.4.17
+  - github.com/argoproj-labs/argocd-autopilot/manifests/base?ref=v0.4.17
+
+# Added these patches
+patches:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: argocd-repo-server
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: 1Gi
+          limits:
+            ephemeral-storage: 2Gi
+            memory: 2Gi
+  - target:
+      group: apps
+      version: v1
+      kind: StatefulSet
+      name: argocd-application-controller
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: 1Gi
+          limits:
+            memory: 2Gi
